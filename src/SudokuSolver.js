@@ -1,273 +1,153 @@
-class Sudoku {
+class SudokuSolver {
     constructor(board) {
         this.board = board;
+        this.i = 0;
+        this.solved = false;
+        this.unsolved = this.findUnsolvedSpaces();
+
+        //set up Object to record attempted numbers at positions
         this.attempts = {};
-        this.solveEasySpaces();
-        let unsolved = this.findUnsolvedSpaces();
-        unsolved.forEach(space => {
-            this.attempts[`${space}`] = [];
+        this.unsolved.forEach(coords => {
+            this.attempts[`${coords.row}-${coords.column}`] = [];
         })
-    }
-
-    isValidChoice(position, choice) {
-        if (choice === undefined) {
-            console.log("undefined choice passed to isValidChoice");
-            return false
-        }
-        this.updateNumberAtPosition(position, choice);
-        if (this.anyErrors()) {
-            this.updateNumberAtPosition(position, 0);
-            return false
-        } else {
-            this.updateNumberAtPosition(position, 0);
-            return true
-        }
-    }
-
-    isSolved() {
-        let empty_spaces = this.remainingSpace();
-        let errors_present = this.anyErrors();
-        if (!empty_spaces && !errors_present) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    column(position) {
-        let column = [];
-        this.board.forEach(row => {
-            column.push(row[position]);
-        });
-        return column;
-    }
-
-    row(position) {
-        return this.board[position]
-    }
-
-    remainingSpace() {
-        let verdict = false;
-        this.board.forEach(row => {
-            verdict = (row.includes(0) ? true : verdict);
-        });
-        return verdict
-    }
-
-    findNumberAtPosition([x, y]) {
-        // x = column, y = row
-        return this.row(y)[x];
-    }
-
-    updateNumberAtPosition([x, y], value) {
-        // x = column, y = row
-        // console.log("before:" + this.board[y][x]);
-        this.board[y][x] = value;
-        // console.log("after:" + this.board[y][x]);
-        // this.printBoard()
-
-    }
-
-    identifyThreeByThreeSquare([x, y]) {
-        //defined by top left coordinate
-        if ([0, 1, 2].includes(x)) {
-            if ([0, 1, 2].includes(y)) { return [0, 0]; }
-            else if ([3, 4, 5].includes(y)) { return [0, 3]; }
-            else if ([6, 7, 8].includes(y)) { return [0, 6]; }
-        }
-        else if ([3, 4, 5].includes(x)) {
-            if ([0, 1, 2].includes(y)) { return [3, 0]; }
-            else if ([3, 4, 5].includes(y)) { return [3, 3]; }
-            else if ([6, 7, 8].includes(y)) { return [3, 6]; }
-        }
-        else if ([6, 7, 8].includes(x)) {
-            if ([0, 1, 2].includes(y)) { return [6, 0]; }
-            else if ([3, 4, 5].includes(y)) { return [6, 3]; }
-            else if ([6, 7, 8].includes(y)) { return [6, 6]; }
-        }
-    }
-
-    findNumbersInThreeByThree([x, y]) {
-        let position = this.identifyThreeByThreeSquare([x, y]);
-        x = position[0];
-        y = position[1];
-        let top = this.row(y).slice(x, x + 3);
-        let middle = this.row(y + 1).slice(x, x + 3);
-        let bottom = this.row(y + 2).slice(x, x + 3);
-        let numbers = top.concat(middle).concat(bottom);
-        return this.uniqueNumbers(numbers)
-    }
-
-    findNumbersAffectingPosition([x, y]) {
-        let rowNumbers = this.row(y);
-        let columnNumbers = this.column(x);
-        let numbers = rowNumbers.concat(columnNumbers);
-        let threeByThreeNumbers = this.findNumbersInThreeByThree([x, y]);
-        numbers = numbers.concat(threeByThreeNumbers);
-        return this.uniqueNumbers(numbers)
-    }
-
-    findPossibleNumbersForPosition([x, y]) {
-        if (this.findNumberAtPosition([x, y]) === 0) {
-            let precludedNumbers = new Set(this.findNumbersAffectingPosition([x, y]));
-            let possibleNumbers = difference(NUMBERS, precludedNumbers);
-            return possibleNumbers = Array.from(possibleNumbers);
-        } else {
-            return [];
-        }
-    }
-
-    uniqueNumbers(number_array) {
-        let uniqueNumbers = number_array.filter(x => typeof x === 'number');
-        uniqueNumbers = [...new Set(uniqueNumbers)].sort();
-        return uniqueNumbers;
-    }
-
-    solveEasySpaces() {
-        // Finds easy to solve spaces and keeps trying to solve these until they run out
-        let shouldLoopContinue = true;
-
-        while (shouldLoopContinue) {
-            let changes = [];
-            let unsolvedSpaces = this.findUnsolvedSpaces()
-            unsolvedSpaces.forEach(position => {
-                let possibleNumbers = this.findPossibleNumbersForPosition(position);
-                if (possibleNumbers.length === 1) {
-                    this.updateNumberAtPosition(position, possibleNumbers[0]);
-                    changes.push(true);
-                } else {
-                    changes.push(false);
-                }
-            })
-            if (!changes.includes(true)) {
-                shouldLoopContinue = false;
-            }
-        }
-        if (this.isSolved()) {
-            this.solved = true;
-            console.log("Sudoku puzzle solved!");
-            this.printBoard();
-        }
     }
 
     findUnsolvedSpaces() {
         let unsolved = [];
-        this.board.forEach(function (row, y) {
-            row.forEach(function (space, x) {
+        this.board.forEach((row, y) => {
+            row.forEach((space, x) => {
                 if (space === 0) {
-                    unsolved.push([x, y]);
+                    unsolved.push({ row: y, column: x });
                 }
-            })
-        })
+            });
+        });
         return unsolved;
     }
 
-    findUnsolvedSpaceWithFewestOptions() {
-        let unsolvedSpaces = this.findUnsolvedSpaces()
-        let fewestPossibilities = { position: [], number: 9 }
-        unsolvedSpaces.forEach(space => {
-            let numberPossibilities = this.findPossibleNumbersForPosition(space).length
-            if (numberPossibilities < fewestPossibilities.number && numberPossibilities > 0) {
-                fewestPossibilities.number = numberPossibilities
-                fewestPossibilities.position = space
-            }
-        })
-        return fewestPossibilities
+    updateSolvedStatus() {
+        let boardNumbers = this.board.flat();
+        let numberSet = new Set(boardNumbers);
+        this.solved = !(numberSet.has(0)); //cannot be solved if a square has 0
     }
 
-    anyErrors() {
-        let accumulator = [];
-        this.board.forEach(row => {
-            let numberFrequencies = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0, '9': 0 }
+    getNumberAtPosition(coords) {
+        // x = column, y = row
+        return this.board[coords.row][coords.column];
+    }
 
-            row.forEach(number => {
-                if (number) {
-                    numberFrequencies[`${number}`] += 1;
+    setNumberAtPosition(coords, value) {
+        // x = column, y = row
+        this.board[coords.row][coords.column] = value;
+    }
+
+    identifySubSquare(coords) {
+        //returns coordinate of top left cell of subsquare
+        let rowOffset = coords.row % 3;
+        let colOffset = coords.column % 3;
+        return {
+            row: coords.row - rowOffset,
+            column: coords.column - colOffset
+        }
+    }
+
+    numbersInRow(coords) {
+        let row = coords.row;
+        let setNumbers = new Set(this.board[row]);
+        setNumbers.delete(0);
+        return [...setNumbers];
+    }
+
+    numbersInColumn(coords) {
+        let column = coords.column;
+        let numbers = this.board.map(row => {
+            return row[column];
+        });
+        let setNumbers = new Set(numbers);
+        setNumbers.delete(0);
+        return [...setNumbers];
+    }
+
+    numbersInSubSquare(coords) {
+        let topLeftCoords = this.identifySubSquare(coords);
+        let numbersInSubSquare = this.board.map((row, rowIndex) => {
+            if (rowIndex >= topLeftCoords.row && rowIndex <= topLeftCoords.row + 2) {
+                let numbers = [];
+                for (let column = topLeftCoords.column; column <= topLeftCoords.column + 2; column++) {
+                    numbers.push(row[column]);
                 }
+                return numbers;
+            }
+            //else ignore as the row doesn't include the subsquare we want
+        })
+        numbersInSubSquare = numbersInSubSquare.filter(element => { return element != undefined });
+        numbersInSubSquare = numbersInSubSquare.flat();
+
+        let setNumbers = new Set(numbersInSubSquare);
+        setNumbers.delete(0);
+        return [...setNumbers];
+    }
+
+    numbersAffectingPosition(coords) {
+        let numbersInRow = this.numbersInRow(coords);
+
+        let numbersInColumn = this.numbersInColumn(coords);
+
+        let numbersInSubSquare = this.numbersInSubSquare(coords);
+
+        let allNumbers = numbersInRow.concat(numbersInColumn, numbersInSubSquare);
+
+        return new Set(allNumbers);
+    }
+
+    possibleNumbersForPosition(coords) {
+        let possibleNumbers = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        let notPossible = this.numbersAffectingPosition(coords);
+        notPossible.forEach(number => {
+            possibleNumbers.delete(number);
+        });
+        return possibleNumbers;
+    }
+
+    solveSelf() {
+        let i = 0;
+        for (i = 0; i < this.unsolved.length; i++) {
+
+            let possibleNumbers = this.possibleNumbersForPosition(this.unsolved[i]); //Set
+            let previouslyTried = this.attempts[`${this.unsolved[i].row}-${this.unsolved[i].column}`]; //Array
+
+            previouslyTried.forEach(number => {
+                possibleNumbers.delete(number);
             })
-            numberFrequencies = Object.values(numberFrequencies);
-            let checkingFrequencies = numberFrequencies.map(frequency => frequency > 1)
-            if (checkingFrequencies.includes(true)) {
-                accumulator.push(true);
-            }
-        })
-        return accumulator.includes(true) ? true : false;
-    }
 
-    printBoard() {
-        this.board.forEach(row => {
-            console.log(row);
-        })
-    }
-}
+            possibleNumbers = [...possibleNumbers]; //convert Set to array
 
-function solve(sudoku) {
-    let unsolved = sudoku.findUnsolvedSpaces();
-    for (let i = 0; i < unsolved.length; i++) {
-        let possibilities = sudoku.findPossibleNumbersForPosition(unsolved[i]);
-        let filteredPossibilities = [];
-        possibilities.forEach(x => {
-            if (sudoku.attempts[unsolved[i]].includes(x)) {
+            if (possibleNumbers.length > 0) {
+                let choice = possibleNumbers[0];
+
+                this.attempts[`${this.unsolved[i].row}-${this.unsolved[i].column}`].push(choice)
+                this.setNumberAtPosition(this.unsolved[i], choice);
+                if (i === this.unsolved.length - 1 && (this.findUnsolvedSpaces().length === 0)) {
+                    console.log("\n\tSudoku solved!");
+                    this.solved = true;
+                }
             } else {
-                filteredPossibilities.push(x)
+                this.setNumberAtPosition(this.unsolved[i], 0);
+                this.attempts[`${this.unsolved[i].row}-${this.unsolved[i].column}`] = [];
+                i--;
+                this.setNumberAtPosition(this.unsolved[i], 0);
+                i--;
+                if (i >= 0) {
+
+                } else {
+                    throw new Error("Unable to solve Sudoku - make sure the board is valid")
+                }
+
             }
-        })
-        if (filteredPossibilities.length > 0) {
-            let choice = filteredPossibilities[0];
-            sudoku.attempts[`${unsolved[i]}`].push(choice)
-            sudoku.updateNumberAtPosition(unsolved[i], choice);
-            if (i === unsolved.length - 1 && sudoku.isSolved()) {
-                console.log("\nSudoku solved, here's the answer:");
-                sudoku.printBoard();
-                console.log('\n');
-            }
-        } else {
-            sudoku.updateNumberAtPosition(unsolved[i], 0);
-            sudoku.attempts[unsolved[i]] = [];
-            i--;
-            sudoku.updateNumberAtPosition(unsolved[i], 0);
-            i--;
         }
     }
+
 }
 
-function isSuperset(set, subset) {
-    for (var elem of subset) {
-        if (!set.has(elem)) {
-            return false;
-        }
-    }
-    return true;
+module.exports = {
+    SudokuSolver
 }
-
-function difference(setA, setB) {
-    var _difference = new Set(setA);
-    for (var elem of setB) {
-        _difference.delete(elem);
-    }
-    return _difference;
-}
-
-const NUMBERS = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-
-
-let board = [
-    [8, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 3, 6, 0, 0, 0, 0, 0],
-    [0, 7, 0, 0, 9, 0, 2, 0, 0],
-    [0, 5, 0, 0, 0, 7, 0, 0, 0],
-    [0, 0, 0, 0, 4, 5, 7, 0, 0],
-    [0, 0, 0, 1, 0, 0, 0, 3, 0],
-    [0, 0, 1, 0, 0, 0, 0, 6, 8],
-    [0, 0, 8, 5, 0, 0, 0, 1, 0],
-    [0, 9, 0, 0, 0, 0, 4, 0, 0]
-];
-
-let sudoku = new Sudoku(board);
-
-console.log("\nTrying to solve this sudoku:");
-console.log(sudoku.printBoard());
-
-solve(sudoku)
-
-console.log(sudoku);
