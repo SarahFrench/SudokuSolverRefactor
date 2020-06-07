@@ -136,9 +136,7 @@ class SudokuSolver {
                 i--;
                 this.setNumberAtPosition(this.unsolved[i], 0);
                 i--;
-                if (i >= 0) {
-
-                } else {
+                if (i < 0) {
                     throw new Error("Unable to solve Sudoku - make sure the board is valid")
                 }
 
